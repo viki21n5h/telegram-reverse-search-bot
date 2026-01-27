@@ -1,0 +1,96 @@
+# ========== VIDEO HANDLER ==========
+
+async def handle_video(update, context):
+    print("🎥 Video received")
+
+    await context.bot.send_chat_action(
+        chat_id=update.effective_chat.id,
+        action=ChatAction.UPLOAD_VIDEO
+    )
+
+    msg_id = update.message.message_id
+    video_file = f"video_{msg_id}.mp4"
+
+    video = await update.message.video.get_file()
+    await video.download_to_drive(video_file)
+
+    c.execute("SELECT hash, link FROM media")
+    db_records = c.fetchall()
+
+    try:
+        subprocess.run(
+            ["ffmpeg", "-i", video_file, "-vf", "fps=1", f"frame_{msg_id}_%03d.jpg", "-loglevel", "error"],
+            check=True
+        )
+    except FileNotFoundError:
+        await update.message.reply_text("❌ FFmpeg not installed.")
+        return
+
+    matches = set()
+    frame_files = glob.glob(f"frame_{msg_id}_*.jpg")
+
+    print("🖼 Extracted frames:", len(frame_files))
+
+    for frame_file in frame_files:
+        qhash = imagehash.phash(Image.open(frame_file).convert("RGB"))
+        for h, link in db_records:
+            if qhash - imagehash.hex_to_hash(h) < 10:
+                matches.add(link)
+        os.remove(frame_file)
+
+    os.remove(video_file)
+
+    if matches:
+        await update.message.reply_text(
+            "✅ Video matches:\n" + "\n".join(list(matches)[:5])
+        )
+    else:
+        await update.message.reply_text("❌ No match found for this video.")
+
+
+
+####scraper.py
+
+    # extract 1 frame per second (max 5 frames)
+    try:
+        subprocess.run(
+            ["ffmpeg", "-i", video_path, "-vf", "fps=1", "frame_%03d.jpg", "-loglevel", "error"],
+            check=True
+        )
+    except Exception as e:
+        print("❌ FFmpeg error:", e)
+        return
+
+    frames = [f for f in os.listdir(".") if f.startswith("frame_")]
+
+    for frame in frames[:5]:
+        try:
+            img = Image.open(frame).convert("RGB")
+            h = str(imagehash.phash(img))
+            c.execute("INSERT OR IGNORE INTO media VALUES (?,?)", (h, link_prefix))
+            conn.commit()
+        except Exception as e:
+            print("❌ Frame error:", e)
+        finally:
+            os.remove(frame)
+
+    os.remove(video_path)
+
+
+async def main():
+    global total_bytes
+    await client.start()
+    print("✅ Logged in")
+
+    for channel in CHANNELS:
+        print(f"📥 Scraping channel: {channel}")
+
+        async for msg in client.iter_messages(channel, limit=500):
+
+            if total_bytes >= MAX_BYTES:
+                print("🛑 Reached 200MB limit. Stopping scrape.")
+                await client.disconnect()
+                conn.close()
+                return
+
+            try:

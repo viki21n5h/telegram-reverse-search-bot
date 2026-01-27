@@ -1,0 +1,17 @@
+.env
+*.session
+
+*.db
+
+.venv/
+venv/
+env/
+
+__pycache__/
+*.py[cod]
+
+*.jpg
+*.mp4
+frames/
+
+.DS_Store
