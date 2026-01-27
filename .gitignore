@@ -1,7 +1,8 @@
-.env
+details.env
 *.session
-
 *.db
+.venv/
+venv/
 
 .venv/
 venv/
