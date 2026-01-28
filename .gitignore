@@ -3,7 +3,7 @@ details.env
 *.db
 .venv/
 venv/
-
+copilot-instructioins.md
 .venv/
 venv/
 env/
@@ -16,3 +16,4 @@ __pycache__/
 frames/
 
 .DS_Store
+.github/copilot-instructions.md
